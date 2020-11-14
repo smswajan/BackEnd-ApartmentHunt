@@ -36,14 +36,48 @@ const client = new MongoClient(uri, {
 client.connect((err) => {
     console.log("connedted db");
     const db = client.db(dbname);
+    const bookingsCollection = db.collection("bookings");
+    const houseCollection = db.collection("houses");
+
 
     // add bookings
     app.post("/add-booking", (req, res) => {
         const newBooking = req.body;
-        reviewsCollection.insertOne(newReview).then(result => {
+        bookingsCollection.insertOne(newBooking).then(result => {
             res.send(result.insertedCount > 0)
         })
     })
+
+    // add house
+    app.post("/add-house", (req, res) => {
+        const newHouse = req.body;
+        houseCollection.insertOne(newHouse).then(result => {
+            res.send(result.insertedCount > 0)
+        })
+    })
+
+
+
+
+    // GET Requests
+    app.get('/bookings', (req, res) => {
+        bookingsCollection.find({}).toArray((err, documents) => {
+            res.send(documents)
+        })
+    })
+
+
+    // update booking status
+    app.patch('/update-booking/:id', (req, res) => {
+        bookingsCollection.updateOne({ _id: ObjectId(req.params.id) },
+            {
+                $set: { status: req.body.currentStatus }
+            }).then(result => {
+                res.send(req.body.currentStatus)
+            })
+    })
+
+
 })
 
 
