@@ -38,11 +38,13 @@ client.connect((err) => {
     const db = client.db(dbname);
     const bookingsCollection = db.collection("bookings");
     const houseCollection = db.collection("houses");
+    const adminsCollection = db.collection("admins");
 
 
     // add bookings
     app.post("/add-booking", (req, res) => {
         const newBooking = req.body;
+        console.log(newBooking);
         bookingsCollection.insertOne(newBooking).then(result => {
             res.send(result.insertedCount > 0)
         })
@@ -56,6 +58,14 @@ client.connect((err) => {
         })
     })
 
+    app.post("/is-admin", (req, res) => {
+        const email = req.body.email;
+        adminsCollection.find({ email: email })
+            .toArray((err, admins) => {
+                res.send(admins.length > 0)
+            })
+    })
+
 
 
 
@@ -65,7 +75,38 @@ client.connect((err) => {
             res.send(documents)
         })
     })
+    app.get('/my-bookings', (req, res) => {
+        const bearer = req.headers.authorization;
+        if (bearer && bearer.startsWith('Bearer ')) {
+            const idToken = bearer.split(' ')[1];
+            admin.auth().verifyIdToken(idToken)
+                .then((decodedToken) => {
+                    let tokenEmail = decodedToken.email;
+                    if (req.query.email === tokenEmail) {
+                        ordersCollection.find({ email: req.query.email }).toArray((err, documents) => {
+                            res.status(200).send(documents)
+                        })
+                    } else {
+                        res.status(401).send('unauthorized access')
+                    }
+                }).catch(error => {
+                    res.status(401).send('unauthorized access')
 
+                })
+
+        } else { res.status(401).send('unauthorized access') }
+
+    })
+    app.get('/apartments', (req, res) => {
+        houseCollection.find({}).toArray((err, documents) => {
+            res.send(documents)
+        })
+    })
+    app.get('/admin-list', (req, res) => {
+        adminsCollection.find({}).sort({ timeStamp: -1 }).toArray((err, documents) => {
+            res.send(documents)
+        })
+    })
 
     // update booking status
     app.patch('/update-booking/:id', (req, res) => {
